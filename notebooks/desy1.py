@@ -230,7 +230,7 @@ class MockY1Likelihood:
         print(p)
         logP = -0.5 * (p^2)
         print("\n TEST \n")
-        print("LOLOLOL")
+        print("LOLOL")
 
         
 
