@@ -229,7 +229,7 @@ class MockY1Likelihood:
     def posterior_and_gradient(self,p):
         print(p)
         logP = -0.5 * (p^2)
-        print("TEST \n")
+        print("\n TEST \n")
 
         
 
