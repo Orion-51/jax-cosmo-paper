@@ -207,7 +207,7 @@ class MockY1Likelihood:
         return logP
 
     # returns -posterior P and -dL/dP
-    def posterior_and_gradient(self, p):
+    def XXXposterior_and_gradient(self, p):
         # theory C_ell prediction
         cl = theory_mean(p, *self.args)
         # d C_ell / d p
@@ -225,6 +225,9 @@ class MockY1Likelihood:
 
         # convert back to regular numpy arrays
         return onp.array(logP), onp.array(dlogP_dp)
+
+    def posterior_and_gradient(self,p):
+        
 
 
 def plot_contours(fisher, pos, i, j, nstd=1., ax=None, resize=False, **kwargs):
