@@ -1,5 +1,6 @@
 import numpy as np
 import hmc
+import matplotlib.pyplot as plt
 
 
 limits = [
@@ -34,7 +35,7 @@ def mock_posterior_and_gradient(p):
     return logP, logP_jacobian
 
 def run_hmc(n_it, filebase, epsilon, steps_per_iteration):
-    rank = 2
+    rank = 3
     filename = f'{filebase}.{rank}.txt'
     np.random.seed(100 + rank)
     C = np.eye(len(limits))
@@ -53,4 +54,11 @@ def run_hmc(n_it, filebase, epsilon, steps_per_iteration):
         # next round of samples
         sampler.sample(n_it)
 
-run_hmc(3, "hmc_002_25", 0.02, 25)
+#run_hmc(10, "hmc_002_10", 0.02, 10)
+
+chain = np.genfromtxt("hmc_002_10.3.txt")
+print(chain.shape)
+plt.plot(chain[:,:1])
+plt.savefig("plot.png")
+print("plotted")
+
