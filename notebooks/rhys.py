@@ -26,6 +26,8 @@ limits = [
     (0.8, 3.0), #bias5
 ]
 
+limits = [(-4,4),(-4,4),(-4,4)]
+
 def mock_posterior_and_gradient(p):
     logP = -0.5 * np.sum(p**2)
     logP_jacobian = p * (-1)
@@ -35,11 +37,11 @@ def run_hmc(n_it, filebase, epsilon, steps_per_iteration):
     rank = 2
     filename = f'{filebase}.{rank}.txt'
     np.random.seed(100 + rank)
-    C = np.eye(len(p))
+    C = np.eye(len(limits))
     # mass matrix
     sampler = hmc.HMC(mock_posterior_and_gradient, C, epsilon, steps_per_iteration, limits)
     # first sample starts at fid
-    fid_params  = np.zeros(p.shape)
+    fid_params  = np.zeros(len(limits))
     results = sampler.sample(n_it, fid_params)
 
     # continue
