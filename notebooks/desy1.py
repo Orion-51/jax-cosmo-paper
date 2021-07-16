@@ -6,6 +6,9 @@ import numpy as onp
 from astropy.io import fits
 import scipy
 
+from jax.config import config
+config.update("jax_enable_x64", True)
+
 def symmetrized_matrix(U):
     u"""Return a new matrix like `U`, but with upper-triangle elements copied to lower-triangle ones."""
     M = U.copy()
@@ -160,8 +163,8 @@ class MockY1Likelihood:
         print("Initializing mock likelihood")
         self.args = [self.nzs_s, self.nzs_l, self.ell]
         self.data_mean = theory_mean(self.fid_params, self.nzs_s, self.nzs_l, self.ell)
-        self.data_cov = theory_cov(self.fid_params, *self.args)
-        self.data_inv_cov = symmetric_positive_definite_inverse(self.data_cov)
+        #self.data_cov = theory_cov(self.fid_params, *self.args)
+        #self.data_inv_cov = symmetric_positive_definite_inverse(self.data_cov)
 
 
     def fisher_matrix(self, p0):
@@ -229,12 +232,6 @@ class MockY1Likelihood:
     def posterior_and_gradient(self,p):
         print(p)
         logP = -0.5 * (p^2)
-<<<<<<< HEAD
-        print("\n TEST \n")
-        print("LOLOLerr")
-=======
->>>>>>> 465075b65dadd6c869df895708481fa32c287694
-
         
 
 
