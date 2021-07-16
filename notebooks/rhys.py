@@ -1,6 +1,7 @@
 import numpy as np
 import hmc
-import jax_cosmo as jc
+import matplotlib.pyplot as plt
+import corner
 
 
 limits = [
@@ -27,25 +28,8 @@ limits = [
     (0.8, 3.0), #bias5
 ]
 
-# First, let's define a function to go to and from a 1d parameter vector
-def get_params_vec(cosmo, m, dz, ia, bias):
-    m1, m2, m3, m4 = m
-    dz1, dz2, dz3, dz4 = dz
-    A, eta = ia
-    b1, b2, b3, b4, b5 = bias
-    return np.array([ 
-        # Cosmological parameters
-        cosmo.sigma8, cosmo.Omega_c, cosmo.Omega_b,
-        cosmo.h, cosmo.n_s, cosmo.w0,
-        # Shear systematics
-        m1, m2, m3, m4,
-        # Photoz systematics
-        dz1, dz2, dz3, dz4,
-        # IA model
-        A, eta,
-        # linear galaxy bias
-        b1, b2, b3, b4, b5
-    ])
+limits = [(-4,4),(-4,4),(-4,4),(-4,4),(-4,4)]
+nparam = len(limits)
 
 def mock_posterior_and_gradient(p):
     logP = -0.5 * np.sum(p**2)
@@ -53,28 +37,19 @@ def mock_posterior_and_gradient(p):
     return logP, logP_jacobian
 
 def run_hmc(n_it, filebase, epsilon, steps_per_iteration):
-    rank = 2
+    #rank = 5
+    rank = nparam
     filename = f'{filebase}.{rank}.txt'
     np.random.seed(100 + rank)
-    C = np.eye(len(p))
+    C = np.eye(nparam)
     # mass matrix
     sampler = hmc.HMC(mock_posterior_and_gradient, C, epsilon, steps_per_iteration, limits)
     # first sample starts at fid
-    fid_cosmo = jc.Cosmology(sigma8=0.801,
-                                  Omega_c=0.2545,
-                                  Omega_b=0.0485,
-                                  h=0.682,
-                                  n_s=0.971,
-                                  w0=-1., Omega_k=0., wa=0.)
-    fid_params  = get_params_vec(fid_cosmo, 
-                                          [0., 0., 0., 0.],
-                                          [0., 0., 0., 0.],
-                                          [0.5, 0.],
-                                          [1.2, 1.4, 1.6, 1.8, 2.0])
+    fid_params  = np.zeros(nparam)
     results = sampler.sample(n_it, fid_params)
 
     # continue
-    for i in range(1000):
+    for i in range(100):
         # Save chain
         chain = np.array(sampler.trace)
         np.savetxt(filename, chain)
@@ -82,4 +57,13 @@ def run_hmc(n_it, filebase, epsilon, steps_per_iteration):
         # next round of samples
         sampler.sample(n_it)
 
-run_hmc(3, "hmc_002_25", 0.02, 25)
+run_hmc(10, "hmc_002_10", 0.02, 10)
+
+chain = np.genfromtxt("hmc_002_10.5.txt")
+print(chain.shape)
+plt.plot(chain[:,0],chain[:,1])
+plt.savefig("plot.png")
+figure = corner.corner(chain)
+figure.savefig("cornerplot.png")
+print("plotted")
+
