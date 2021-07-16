@@ -163,8 +163,8 @@ class MockY1Likelihood:
         print("Initializing mock likelihood")
         self.args = [self.nzs_s, self.nzs_l, self.ell]
         self.data_mean = theory_mean(self.fid_params, self.nzs_s, self.nzs_l, self.ell)
-        #self.data_cov = theory_cov(self.fid_params, *self.args)
-        #self.data_inv_cov = symmetric_positive_definite_inverse(self.data_cov)
+        self.data_cov = theory_cov(self.fid_params, *self.args)
+        self.data_inv_cov = symmetric_positive_definite_inverse(self.data_cov)
 
 
     def fisher_matrix(self, p0):
@@ -210,7 +210,7 @@ class MockY1Likelihood:
         return logP
 
     # returns -posterior P and -dL/dP
-    def XXXposterior_and_gradient(self, p):
+    def posterior_and_gradient(self, p):
         # theory C_ell prediction
         cl = theory_mean(p, *self.args)
         # d C_ell / d p
@@ -228,10 +228,6 @@ class MockY1Likelihood:
 
         # convert back to regular numpy arrays
         return onp.array(logP), onp.array(dlogP_dp)
-
-    def posterior_and_gradient(self,p):
-        print(p)
-        logP = -0.5 * (p^2)
         
 
 
