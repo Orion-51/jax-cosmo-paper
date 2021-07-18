@@ -28,7 +28,7 @@ limits = [
     (0.8, 3.0), #bias5
 ]
 
-limits = [(-4,4),(-4,4),(-4,4),(-4,4),(-4,4)]
+limits = [(-4,4),(-4,4),(-4,4)]
 nparam = len(limits)
 
 def mock_posterior_and_gradient(p):
@@ -49,7 +49,7 @@ def run_hmc(n_it, filebase, epsilon, steps_per_iteration):
     results = sampler.sample(n_it, fid_params)
 
     # continue
-    for i in range(100):
+    for i in range(1000):
         # Save chain
         chain = np.array(sampler.trace)
         np.savetxt(filename, chain)
@@ -59,7 +59,7 @@ def run_hmc(n_it, filebase, epsilon, steps_per_iteration):
 
 run_hmc(10, "hmc_002_10", 0.02, 10)
 
-chain = np.genfromtxt("hmc_002_10.5.txt")
+chain = np.genfromtxt("hmc_002_10.3.txt")
 print(chain.shape)
 plt.plot(chain[:,0],chain[:,1])
 plt.savefig("plot.png")
