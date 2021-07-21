@@ -49,17 +49,22 @@ def run_hmc(n_it, filebase, epsilon, steps_per_iteration):
     results = sampler.sample(n_it, fid_params)
 
     # continue
-    for i in range(1000):
+    #for i in range(1):
         # Save chain
-        chain = np.array(sampler.trace)
-        np.savetxt(filename, chain)
+        #chain = np.array(sampler.trace)
+        #np.savetxt(filename, chain)
 
         # next round of samples
-        sampler.sample(n_it)
+    #sampler.sample(n_it)
+    
+    chain = np.array(sampler.paths)
+    np.savetxt(filename, chain)
 
-run_hmc(10, "hmc_002_10", 0.02, 10)
+nit = 50
+spit = 50
+run_hmc(nit, "hmc_002_500", 0.02, spit)
 
-chain = np.genfromtxt("hmc_002_10.3.txt")
+chain = np.genfromtxt("hmc_002_500.3.txt")
 print(chain.shape)
 plt.plot(chain[:,0],chain[:,1])
 plt.savefig("plot.png")
