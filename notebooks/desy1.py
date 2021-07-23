@@ -187,6 +187,7 @@ class MockY1Likelihood:
         j = onp.array(j)
         F = onp.einsum('ia,ij,jb->ab', j, self.data_inv_cov, j)
         F = 0.5*(F + F.T)
+        print("fisher returned")
 
         return F
 
