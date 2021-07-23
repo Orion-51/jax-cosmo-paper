@@ -166,8 +166,10 @@ class MockY1Likelihood:
         self.data_cov = theory_cov(self.fid_params, *self.args)
         self.data_cov = onp.array(self.data_cov)
 
-        n_cls = onp.sqrt(self.data_cov.shape[0])
-        n_ell = self.data_cov.shape[1]
+        n_cls = int(onp.sqrt(self.data_cov.shape[0]))
+        n_ell = int(self.data_cov.shape[1])
+        print(n_cls)
+        print(n_ell)
         c = onp.zeros((n_cls * n_ell, n_cls * n_ell))
 
         for i in range(n_cls):
