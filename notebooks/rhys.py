@@ -28,7 +28,7 @@ limits = [
     (0.8, 3.0), #bias5
 ]
 
-limits = [(-4,4),(-4,4),(-4,4)]
+limits = [(-4,4),(-4,4)]
 nparam = len(limits)
 
 def mock_posterior_and_gradient(p):
