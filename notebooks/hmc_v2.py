@@ -40,11 +40,18 @@ class HMC:
         self.trace = []
         self.trace_accept = []
 
+        self.anti_trace_logP = []
+        self.anti_trace = []
+        self.anti_trace_accept = []
+
         # As well as tracing the accepted samples it's also nice
         # to trace the integration paths between those samples.
         # Improvements to the algorithm make use of those.
         self.paths = []
         self.paths_logP = []
+
+        self.anti_paths = []
+        self.anti_paths_logP = []
 
         # We need the boundary planes that correspond to the parameter
         # limits, transformed into our new coordinates.
@@ -89,9 +96,13 @@ class HMC:
         # is linear, so the change to P(x) is just a scaling, so the change to
         # logP is just a constant
         return -logP, -self.L.T @ grad_logP
+
+    def euclid_dist(self,v1,v2):
+        dist = onp.linalg.norm(v1-v2)
+        return dist
         
 
-    def integrate(self, q, p):
+    def integrate(self, q, p, direction):
         U, gradU = self.get_u(q)
         # Hamiltonian at the start of the integration
         H0 = 0.5 * (p @ p) + U
@@ -113,11 +124,20 @@ class HMC:
             H = T + U
             dH = H - H0
             # print(f'U={U:.3f}   T={T:.3f}   H={H:.3f}   ΔH={dH:.3f}')
-            # record a trace of the log_post, -U
-            self.paths_logP.append(-U)
-            # and the chain position
-            x = self.q2x(q)
-            self.paths.append(x)
+
+            if direction == "forward":
+                # record a trace of the log_post, -U
+                self.paths_logP.append(-U)
+                # and the chain position
+                x = self.q2x(q)
+                self.paths.append(x)
+            
+            if direction == "backward":
+                # record a trace of the log_post, -U
+                self.anti_paths_logP.append(-U)
+                # and the chain position
+                x = self.q2x(q)
+                self.anti_paths.append(x)
         
         return p, q, U, H, H0
     
@@ -177,10 +197,12 @@ class HMC:
 
             # Generate a new random momentum vector
             p = self.random_kick()
+            anti_p = -p
 
             try:
                 # Integrate the trajectory along that path
-                p, q_new, U, H, H0 = self.integrate(q, p)
+                p, q_new, U, H, H0 = self.integrate(q, p, "forward")
+                anti_p, anti_q_new, anti_U, anti_H, anti_H0 = self.integrate(q, p, "backward")
             except ExtremeJumpError as err:
                 # We catch a specific error - 
                 print(f"Extreme jump rejected {err}")

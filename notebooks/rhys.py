@@ -58,16 +58,18 @@ def run_hmc(n_it, filebase, epsilon, steps_per_iteration):
     #sampler.sample(n_it)
     
     chain = np.array(sampler.paths)
+    anti_chain = np.array(sampler.anti_paths)
     #np.savetxt(filename, chain)
-    return chain
+    return chain, anti_chain
 
-nit = 1000
+nit = 5
 spit = 50
-chain = run_hmc(nit, "hmc_002_500", 0.02, spit)
+chain, anti_chain = run_hmc(nit, "hmc_002_500", 0.02, spit)
 
 #chain = np.genfromtxt("hmc_002_500.3.txt")
-print(chain.shape)
+#print(chain.shape)
 plt.plot(chain[:,0],chain[:,1])
+plt.plot(anti_chain[:,0],anti_chain[:,1])
 plt.savefig("plot.png")
 figure = corner.corner(chain)
 figure.savefig("cornerplot.png")
