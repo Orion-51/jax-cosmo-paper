@@ -245,7 +245,8 @@ class HMC:
                 lam[i] = (-(q - lq) @ m) / (p @ m)
 
         i = lam.argmin()
-        q_new = q + lam[i]* 0.99 * p
+        print("added extra 9")
+        q_new = q + lam[i]* 0.999 * p
         # useful to let the user know where we crossed
         b = self.q2x(q + lam[i] * p)[i]
         print(f"Note: parameter {i} reflecting at boundary {b}")

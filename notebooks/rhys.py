@@ -1,5 +1,5 @@
 import numpy as np
-import hmc
+import hmc_v2 as hmc
 import matplotlib.pyplot as plt
 import corner
 
@@ -58,13 +58,13 @@ def run_hmc(n_it, filebase, epsilon, steps_per_iteration):
     #sampler.sample(n_it)
     
     chain = np.array(sampler.paths)
-    np.savetxt(filename, chain)
+    #np.savetxt(filename, chain)
 
-nit = 50
+nit = 1000
 spit = 50
 run_hmc(nit, "hmc_002_500", 0.02, spit)
 
-chain = np.genfromtxt("hmc_002_500.3.txt")
+#chain = np.genfromtxt("hmc_002_500.3.txt")
 print(chain.shape)
 plt.plot(chain[:,0],chain[:,1])
 plt.savefig("plot.png")

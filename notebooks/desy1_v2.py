@@ -7,6 +7,12 @@ from astropy.io import fits
 import scipy
 from functools import partial
 
+import time
+import cProfile
+start = time.time()
+
+#from jax.config import config
+#config.update("jax_enable_x64", True)
 
 #desy1_v2
 nz_source=fits.getdata('2pt_NG_mcal_1110.fits', 6)
@@ -174,6 +180,7 @@ def posterior_and_gradient(p, ell, data_mean, inv_cov):
     logPi, dlogPi_dp = priors(p)
     logP = logL + logPi
     dlogP_dp = dlogL_dp + dlogPi_dp
+    #print("posterior done. took %.2f" %(time.time()-start))
 
     return logP, dlogP_dp
 
@@ -239,3 +246,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+    #cProfile.run('main()')

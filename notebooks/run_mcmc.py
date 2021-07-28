@@ -1,11 +1,11 @@
 import hmc
-import desy1
+import desy1_v2 as desy1
 import numpy as np
 import sys
 import cobaya.run
 import time
 
-start = time.time()
+#start = time.time()
 
 GELMAN_RUBIN_TARGET = 0.03
 
@@ -103,7 +103,7 @@ def run_hmc(n_it, filebase, epsilon, steps_per_iteration):
      # mass matrix
     C = y1.cov_estimate()
     print("cov acquired")
-    print(str(time.time()-start))
+    #print(str(time.time()-start))
 
     sampler = hmc.HMC(y1.posterior_and_gradient, C, epsilon, steps_per_iteration, limits)
 
@@ -115,7 +115,7 @@ def run_hmc(n_it, filebase, epsilon, steps_per_iteration):
         # Save chain
         chain = np.array(sampler.trace)
         np.savetxt(filename, chain)
-        print(str(time.time()-start))
+        #print(str(time.time()-start))
 
         # check convergence
         Rminus1 = gelman_rubin_r_minus_1(chain, COMM_WORLD)
@@ -206,6 +206,6 @@ def run_mh(filename):
 
 if __name__ == '__main__':
     if sys.argv[1]  == 'hmc':
-        run_hmc(1, "hmc_002_25", 0.02, 25)
+        run_hmc(1, "hmc_002_25", 0.02, 2)
     else:
         run_mh('cob_fisher_proposal.txt')

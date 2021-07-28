@@ -166,19 +166,19 @@ class MockY1Likelihood:
         self.data_cov = theory_cov(self.fid_params, *self.args)
         self.data_cov = onp.array(self.data_cov)
 
-        n_cls = int(onp.sqrt(self.data_cov.shape[0]))
-        n_ell = int(self.data_cov.shape[1])
-        print(n_cls)
-        print(n_ell)
-        c = onp.zeros((n_cls * n_ell, n_cls * n_ell))
+        # n_cls = int(onp.sqrt(self.data_cov.shape[0]))
+        # n_ell = int(self.data_cov.shape[1])
+        # print(n_cls)
+        # print(n_ell)
+        # c = onp.zeros((n_cls * n_ell, n_cls * n_ell))
 
-        for i in range(n_cls):
-            for j in range(n_cls):
-                s1 = i * n_ell
-                s2 = j * n_ell
+        # for i in range(n_cls):
+        #     for j in range(n_cls):
+        #         s1 = i * n_ell
+        #         s2 = j * n_ell
 
-                c[s1:s1+n_ell, s2:s2+n_ell] = self.data_cov[i + n_cls*j]
-        self.data_cov = c
+        #         c[s1:s1+n_ell, s2:s2+n_ell] = self.data_cov[i + n_cls*j]
+        # self.data_cov = c
         self.data_inv_cov = symmetric_positive_definite_inverse(self.data_cov)
 
 
