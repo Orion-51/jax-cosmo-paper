@@ -100,44 +100,68 @@ class HMC:
     def euclid_dist(self,v1,v2):
         dist = onp.linalg.norm(v1-v2)
         return dist
+    
+    def step(self,q,p, gradU, H0):
+        # half-update momenta
+        p = p - 0.5 * self.epsilon * gradU
+        
+        # full update q with half-updated p
+        q, p = self.advance_points(q, p)
+        
+        # second half-update momenta
+        U, gradU = self.get_u(q)
+        p = p - 0.5 * self.epsilon * gradU
+        
+        # print out energy levels
+        T = 0.5 * (p @ p)
+        H = T + U
+        dH = H - H0
+        # print(f'U={U:.3f}   T={T:.3f}   H={H:.3f}   ΔH={dH:.3f}')
+
+        return p, q, U, H, H0
         
 
-    def integrate(self, q, p, direction):
+    def integrate(self, q, p):
+        dist = [0]
+        anti_p = -p
+        anti_q = q
         U, gradU = self.get_u(q)
         # Hamiltonian at the start of the integration
         H0 = 0.5 * (p @ p) + U
         # I don't really know what symplectic means, but I know
         # this is it.
-        for i in range(self.steps_per_iteration):
-            # half-update momenta
-            p = p - 0.5 * self.epsilon * gradU
-            
-            # full update q with half-updated p
-            q, p = self.advance_points(q, p)
-            
-            # second half-update momenta
-            U, gradU = self.get_u(q)
-            p = p - 0.5 * self.epsilon * gradU
-            
-            # print out energy levels
-            T = 0.5 * (p @ p)
-            H = T + U
-            dH = H - H0
-            # print(f'U={U:.3f}   T={T:.3f}   H={H:.3f}   ΔH={dH:.3f}')
+        nuts = 0
+        counter = 0
+        while nuts == 0:
+        #for i in range(self.steps_per_iteration):
+            p, q, U, H, H0 = self.step(q,p,gradU, H0)
+            anti_p, anti_q, anti_U, anti_H, anti_H0 = self.step(anti_q,anti_p, gradU, H0)
 
-            if direction == "forward":
-                # record a trace of the log_post, -U
-                self.paths_logP.append(-U)
-                # and the chain position
-                x = self.q2x(q)
-                self.paths.append(x)
-            
-            if direction == "backward":
-                # record a trace of the log_post, -U
-                self.anti_paths_logP.append(-U)
-                # and the chain position
-                x = self.q2x(q)
-                self.anti_paths.append(x)
+            # record a trace of the log_post, -U
+            self.paths_logP.append(-U)
+            # and the chain position
+            x = self.q2x(q)
+            self.paths.append(x)
+
+            # record a trace of the log_post, -U
+            self.anti_paths_logP.append(-anti_U)
+            # and the chain position
+            anti_x = self.q2x(anti_q)
+            self.anti_paths.append(anti_x)
+            dis = onp.linalg.norm(q-anti_q)
+            dist.append(dis)
+            #print(dis)
+
+            if dist[-1]<dist[-2]:
+                nuts = 1
+
+            counter += 1
+
+        #print(dist)
+        print(dist[-3])
+        print(dist[-2])
+        print(dist[-1])
+        print("Stopped after %.0f steps" %counter )
         
         return p, q, U, H, H0
     
@@ -197,12 +221,10 @@ class HMC:
 
             # Generate a new random momentum vector
             p = self.random_kick()
-            anti_p = -p
 
             try:
                 # Integrate the trajectory along that path
-                p, q_new, U, H, H0 = self.integrate(q, p, "forward")
-                anti_p, anti_q_new, anti_U, anti_H, anti_H0 = self.integrate(q, p, "backward")
+                p, q_new, U, H, H0 = self.integrate(q, p)
             except ExtremeJumpError as err:
                 # We catch a specific error - 
                 print(f"Extreme jump rejected {err}")
