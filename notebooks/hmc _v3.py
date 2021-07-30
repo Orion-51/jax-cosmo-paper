@@ -89,29 +89,38 @@ class HMC:
         # is linear, so the change to P(x) is just a scaling, so the change to
         # logP is just a constant
         return -logP, -self.L.T @ grad_logP
-        
 
-    def integrate(self, q, p):
+    def step(self, p, q):
         U, gradU = self.get_u(q)
         # Hamiltonian at the start of the integration
         H0 = 0.5 * (p @ p) + U
         # I don't really know what symplectic means, but I know
         # this is it.
+
+        # half-update momenta
+        p = p - 0.5 * self.epsilon * gradU
+        
+        # full update q with half-updated p
+        q, p = self.advance_points(q, p)
+        
+        # second half-update momenta
+        U, gradU = self.get_u(q)
+        p = p - 0.5 * self.epsilon * gradU
+        
+        # print out energy levels
+        T = 0.5 * (p @ p)
+        H = T + U
+        dH = H - H0
+
+        return p, q, U, H, H0
+    
+
+    def integrate(self, q, p):
+        
         for i in range(self.steps_per_iteration):
-            # half-update momenta
-            p = p - 0.5 * self.epsilon * gradU
-            
-            # full update q with half-updated p
-            q, p = self.advance_points(q, p)
-            
-            # second half-update momenta
-            U, gradU = self.get_u(q)
-            p = p - 0.5 * self.epsilon * gradU
-            
-            # print out energy levels
-            T = 0.5 * (p @ p)
-            H = T + U
-            dH = H - H0
+
+            p, q, U, H, H0 = self.step(p, q)
+           
             # print(f'U={U:.3f}   T={T:.3f}   H={H:.3f}   ΔH={dH:.3f}')
             # record a trace of the log_post, -U
             self.paths_logP.append(-U)
