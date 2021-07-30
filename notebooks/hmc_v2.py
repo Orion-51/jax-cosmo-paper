@@ -101,7 +101,7 @@ class HMC:
         dist = onp.linalg.norm(v1-v2)
         return dist
     
-    def step(self,q,p, gradU, H0):
+    def step(self,q,p, gradU):
         # half-update momenta
         p = p - 0.5 * self.epsilon * gradU
         
@@ -112,13 +112,9 @@ class HMC:
         U, gradU = self.get_u(q)
         p = p - 0.5 * self.epsilon * gradU
         
-        # print out energy levels
-        T = 0.5 * (p @ p)
-        H = T + U
-        dH = H - H0
-        # print(f'U={U:.3f}   T={T:.3f}   H={H:.3f}   ΔH={dH:.3f}')
 
-        return p, q, U, H, H0
+
+        return p, q, U
         
 
     def integrate(self, q, p):
@@ -126,6 +122,7 @@ class HMC:
         anti_p = -p
         anti_q = q
         U, gradU = self.get_u(q)
+        anti_U, anti_gradU = self.get_u(q)
         # Hamiltonian at the start of the integration
         H0 = 0.5 * (p @ p) + U
         # I don't really know what symplectic means, but I know
@@ -134,8 +131,31 @@ class HMC:
         counter = 0
         while nuts == 0:
         #for i in range(self.steps_per_iteration):
-            p, q, U, H, H0 = self.step(q,p,gradU, H0)
-            anti_p, anti_q, anti_U, anti_H, anti_H0 = self.step(anti_q,anti_p, gradU, H0)
+            # half-update momenta
+            p = p - 0.5 * self.epsilon * gradU
+            
+            # full update q with half-updated p
+            q, p = self.advance_points(q, p)
+            
+            # second half-update momenta
+            U, gradU = self.get_u(q)
+            p = p - 0.5 * self.epsilon * gradU
+
+            # half-update momenta
+            anti_p = anti_p - 0.5 * self.epsilon * anti_gradU
+            
+            # full update q with half-updated p
+            anti_q, anti_p = self.advance_points(anti_q, anti_p)
+            
+            # second half-update momenta
+            anti_U, anti_gradU = self.get_u(anti_q)
+            anti_p = anti_p - 0.5 * self.epsilon * anti_gradU
+
+            # print out energy levels
+            T = 0.5 * (p @ p)
+            H = T + U
+            dH = H - H0
+            # print(f'U={U:.3f}   T={T:.3f}   H={H:.3f}   ΔH={dH:.3f}')
 
             # record a trace of the log_post, -U
             self.paths_logP.append(-U)
@@ -148,6 +168,8 @@ class HMC:
             # and the chain position
             anti_x = self.q2x(anti_q)
             self.anti_paths.append(anti_x)
+
+            #calculate and record distance for nuts
             dis = onp.linalg.norm(q-anti_q)
             dist.append(dis)
             #print(dis)
@@ -158,9 +180,9 @@ class HMC:
             counter += 1
 
         #print(dist)
-        print(dist[-3])
-        print(dist[-2])
-        print(dist[-1])
+        #print("%.5f" %dist[-3])
+        #print("%.5f" %dist[-2])
+        #print("%.5f" %dist[-1])
         print("Stopped after %.0f steps" %counter )
         
         return p, q, U, H, H0
