@@ -116,8 +116,14 @@ class HMC:
     
 
     def integrate(self, q, p):
+
+        dist = [0]
+        q_0 = q
         
-        for i in range(self.steps_per_iteration):
+        nuts = 0
+        counter = 0
+        while nuts == 0:
+        #for i in range(self.steps_per_iteration):
 
             p, q, U, H, H0 = self.step(p, q)
            
@@ -127,6 +133,18 @@ class HMC:
             # and the chain position
             x = self.q2x(q)
             self.paths.append(x)
+
+            #calculate and record distance for nuts
+            dis = onp.linalg.norm(q-q_0)
+            dist.append(dis)
+            #print(dis)
+
+            if dist[-1]<dist[-2]:
+                nuts = 1
+
+            counter += 1
+        
+        print("Stopped after %.0f steps" %counter )
         
         return p, q, U, H, H0
     
