@@ -15,6 +15,9 @@ class HMC:
         self.fun_args = args
         self.fun_kwargs = kwargs
 
+        self.ncall = 0
+        self.ncall_list = []
+
         # The mid-point.
         # We use this to transform the boundary planes
         self.limits = onp.array(limits)
@@ -91,6 +94,7 @@ class HMC:
         x = self.q2x(q)
         # Get the posterior and gradient
         logP, grad_logP = self.fun(x, *self.fun_args, **self.fun_kwargs)
+        self.ncall += 1
         # convert the gradient to the transformed coordinates, using the Jacobian.
         # we  don't have to convert logP because the coordinate transformation
         # is linear, so the change to P(x) is just a scaling, so the change to
@@ -101,7 +105,13 @@ class HMC:
         dist = onp.linalg.norm(v1-v2)
         return dist
     
-    def step(self,q,p, gradU):
+    def step(self, p, q):
+        U, gradU = self.get_u(q)
+        # Hamiltonian at the start of the integration
+        H0 = 0.5 * (p @ p) + U
+        # I don't really know what symplectic means, but I know
+        # this is it.
+
         # half-update momenta
         p = p - 0.5 * self.epsilon * gradU
         
@@ -112,15 +122,18 @@ class HMC:
         U, gradU = self.get_u(q)
         p = p - 0.5 * self.epsilon * gradU
         
+        # print out energy levels
+        T = 0.5 * (p @ p)
+        H = T + U
+        dH = H - H0
+        #print("step")
 
-
-        return p, q, U
+        return p, q, U, H, H0
         
 
     def integrate(self, q, p):
         dist = [0]
-        anti_p = -p
-        anti_q = q
+        anti_p, anti_q = -p, q
         U, gradU = self.get_u(q)
         anti_U, anti_gradU = self.get_u(q)
         # Hamiltonian at the start of the integration
@@ -131,31 +144,8 @@ class HMC:
         counter = 0
         while nuts == 0:
         #for i in range(self.steps_per_iteration):
-            # half-update momenta
-            p = p - 0.5 * self.epsilon * gradU
-            
-            # full update q with half-updated p
-            q, p = self.advance_points(q, p)
-            
-            # second half-update momenta
-            U, gradU = self.get_u(q)
-            p = p - 0.5 * self.epsilon * gradU
-
-            # half-update momenta
-            anti_p = anti_p - 0.5 * self.epsilon * anti_gradU
-            
-            # full update q with half-updated p
-            anti_q, anti_p = self.advance_points(anti_q, anti_p)
-            
-            # second half-update momenta
-            anti_U, anti_gradU = self.get_u(anti_q)
-            anti_p = anti_p - 0.5 * self.epsilon * anti_gradU
-
-            # print out energy levels
-            T = 0.5 * (p @ p)
-            H = T + U
-            dH = H - H0
-            # print(f'U={U:.3f}   T={T:.3f}   H={H:.3f}   ΔH={dH:.3f}')
+            p, q, U, H, H0 = self.step(p, q)
+            anti_p, anti_q, anti_U, anti_H, anti_H0 = self.step(anti_p, anti_q)
 
             # record a trace of the log_post, -U
             self.paths_logP.append(-U)
@@ -163,9 +153,9 @@ class HMC:
             x = self.q2x(q)
             self.paths.append(x)
 
-            # record a trace of the log_post, -U
+            # record a trace of the anti - log_post, -U
             self.anti_paths_logP.append(-anti_U)
-            # and the chain position
+            # and the anti - chain position
             anti_x = self.q2x(anti_q)
             self.anti_paths.append(anti_x)
 
@@ -178,12 +168,12 @@ class HMC:
                 nuts = 1
 
             counter += 1
-
+        
         #print(dist)
         #print("%.5f" %dist[-3])
         #print("%.5f" %dist[-2])
         #print("%.5f" %dist[-1])
-        print("Stopped after %.0f steps" %counter )
+        #print("Stopped after %.0f steps" %counter )
         
         return p, q, U, H, H0
     
@@ -230,7 +220,7 @@ class HMC:
         if start is None:
             if self.trace:
                 start = self.trace[-1]
-                print(f"Starting at: {start}")
+                #print(f"Starting at: {start}")
             else:
                 raise ValueError("Must supply a starting point the first call to hmc.sample.")
         else:
@@ -265,15 +255,18 @@ class HMC:
             if accept:
                 self.n_accept += 1
                 q = q_new
-                print(f"Accept {j} alpha={alpha:.2f}  p={p1:.2f}  ΔH={deltaH:.3f}")
+                if j%10==0:
+                    print(f"Accept {j} alpha={alpha:.2f}  p={p1:.2f}  ΔH={deltaH:.3f}")
             else:
                 self.n_reject += 1
-                print(f"Reject {j} alpha={alpha:.2f}  p={p1:.2f}  Δh={deltaH:.3f}")
+                if j%10==0:
+                    print(f"Reject {j} alpha={alpha:.2f}  p={p1:.2f}  Δh={deltaH:.3f}")
             # keep a trace of things
             x = self.q2x(q)
             self.trace.append(x)
             self.trace_logP.append(-U)
             self.trace_accept.append(accept)
+            self.ncall_list.append(self.ncall)
 
 
     def first_boundary_crossing(self, q, p, done):
