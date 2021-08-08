@@ -89,6 +89,41 @@ class HMC:
         # is linear, so the change to P(x) is just a scaling, so the change to
         # logP is just a constant
         return -logP, -self.L.T @ grad_logP
+
+    def step(self, p, q):
+        U, gradU = self.get_u(q)
+        # Hamiltonian at the start of the integration
+        H0 = 0.5 * (p @ p) + U
+        # I don't really know what symplectic means, but I know
+        # this is it.
+
+        # half-update momenta
+        p = p - 0.5 * self.epsilon * gradU
+        
+        # full update q with half-updated p
+        q, p = self.advance_points(q, p)
+        
+        # second half-update momenta
+        U, gradU = self.get_u(q)
+        p = p - 0.5 * self.epsilon * gradU
+        
+        # print out energy levels
+        T = 0.5 * (p @ p)
+        H = T + U
+        dH = H - H0
+        #print("step")
+
+        return p, q, U, H, H0
+
+    def BuildTree(self, q, p, u, v, j, q_0, p_0):
+        if j == 0:
+            p =* v
+            p, q, U, H, H0 = self.step(p, q)
+            n_dash = bool(u<onp.exp)
+
+        else:
+            q_minus, p_minus, q_plus, p_plus, 
+
         
 
     def integrate(self, q, p):
