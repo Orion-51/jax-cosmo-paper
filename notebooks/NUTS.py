@@ -48,7 +48,7 @@ class HMC:
         dq = q_plus - q_minus
         criterion_1 = onp.dot(dq,p_minus.T) >= 0
         criterion_2 = onp.dot(dq,p_plus.T) >= 0
-        return (criterion_1 & criterion_2)
+        return criterion_1 & criterion_2
 
     def get_u(self, q):
         """Compute the posterior and gradient from (and in) normalized coordinates"""
@@ -56,11 +56,13 @@ class HMC:
         x = self.q2x(q)
         # Get the posterior and gradient
         logP, grad_logP = self.fun(x, *self.fun_args, **self.fun_kwargs)
+        self.ncall += 1
         # convert the gradient to the transformed coordinates, using the Jacobian.
         # we  don't have to convert logP because the coordinate transformation
         # is linear, so the change to P(x) is just a scaling, so the change to
         # logP is just a constant
-        return -logP, -self.L.T @ grad_logP
+        #return -logP, -self.L.T @ grad_logP
+        return logP, grad_logP
 
     def leapfrog(self, q, p, epsilon):
         #get gradient
@@ -79,27 +81,28 @@ class HMC:
     def find_reasonable_epsilon(self, q):
         #set epsilon and an initial random momentum
         epsilon = 1.
-        p = onp.random.normal(0.,1.,len(q))
+        p_0 = onp.random.normal(0.,1.,len(q))
         #get U
         U, gradU = self.get_u(q)
 
         #update p and q
-        _, p_prime, U_prime, gradU_prime = self.leapfrog(q,p, epsilon)
+        _, p_prime, U_prime, gradU_prime = self.leapfrog(q,p_0, epsilon)
 
         #set alpha
-        condition = U_prime-U-0.5*(onp.dot(p_prime,p_prime)-onp.dot(p,p))
+        condition = U_prime-U-0.5*(onp.dot(p_prime,p_prime)-onp.dot(p_0,p_0))
         if condition > onp.log(0.5):
             alpha = 1.
         else:
             alpha = -1.
 
-        while alpha * condition > -alpha * onp.log(1.5):
+        while alpha * condition > -alpha * onp.log(2.):
             #update epsilon
             epsilon = epsilon * (1.5 ** alpha)
+            print(epsilon)
             #simulate step
-            _, p_prime, U_prime, _ = self.leapfrog(q,p,epsilon)
+            _, p_prime, U_prime, _ = self.leapfrog(q,p_0,epsilon)
             #update condition
-            condition = U_prime-U-0.5*(onp.dot(p_prime,p_prime)-onp.dot(p,p))
+            condition = U_prime-U-0.5*(onp.dot(p_prime,p_prime)-onp.dot(p_0,p_0))
 
         print("Reasonable epsilon is "+str(epsilon))
 
@@ -115,7 +118,7 @@ class HMC:
             condition = U_prime - 0.5 * onp.dot(p_prime,p_prime.T)
 
             U_0, gradU_0 = self.get_u(q_0)
-            condition_0 = U_0 + 0.5 * onp.dot(p_0,p_0.T)
+            condition_0 = U_0 - 0.5 * onp.dot(p_0,p_0.T)
 
             #get nprime
             n_prime = int(u < condition)
@@ -169,6 +172,8 @@ class HMC:
         lnprob = onp.empty((M+M_adapt,len(q_0)))
 
         for m in range(1, M + M_adapt):
+            if m %((M+M_adapt)/50) == 0:
+                print(m)
             #resample - random kick?
             p_0 = onp.random.normal(0,1,len(q_0))
             condition = U - 0.5 * onp.dot(p_0, p_0.T)
@@ -193,7 +198,9 @@ class HMC:
                 if s_prime == 1:
                     if onp.random.uniform() < min(1, float(n_prime) / float(n)):
                         samples[m, :] = q_prime
-                        print("Sample accepted j = " + str(j))
+                        #print("Sample accepted j = " + str(j))
+                        self.paths.append(q_prime)
+                        
 
                 n = n + n_prime
                 s = s_prime and self.stop_when(q_minus, q_plus, p_minus, p_plus)
@@ -205,10 +212,13 @@ class HMC:
                 epsilon = onp.exp(mu - onp.sqrt(m) / gamma * H_bar)
                 power = m ** -kappa
                 eps_bar = onp.exp(power * onp.log(epsilon) + (1-power) * onp.log(eps_bar))
+                if m == M_adapt:
+                    self.ncall_list.append(self.ncall)
             else:
                 epsilon = eps_bar
-
-            self.ncall_list.append(self.ncall)
+                self.ncall_list.append(self.ncall)
 
             
-        self.paths = samples[M_adapt:,:]
+
+            
+        self.trace = samples[M_adapt:,:]
