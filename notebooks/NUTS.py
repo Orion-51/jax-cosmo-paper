@@ -62,7 +62,7 @@ class HMC:
         # we  don't have to convert logP because the coordinate transformation
         # is linear, so the change to P(x) is just a scaling, so the change to
         # logP is just a constant
-        #return -logP, -self.L.T @ grad_logP
+        #return -logP, -self.L.T @ grad_logPi
         return logP, grad_logP
 
     def leapfrog(self, q, p, epsilon):
@@ -109,7 +109,6 @@ class HMC:
 
         return epsilon
 
-        #THIS IS UNFINISHED
 
     def build_tree(self,q,p,u,v,j,epsilon,q_0,p_0):
         Delta_max = 1000
@@ -126,11 +125,9 @@ class HMC:
             #get sprime
             s_prime = int(u < (Delta_max + condition))
 
-            #gotta be tricksy about returning here
-            # q_minus, q_plus = q_prime, q_prime
-            # p_minus, p_plus = p_prime, p_prime
+            #return stuff
             alpha_prime = min(1., onp.exp(condition - condition_0))
-            # nalpha_prime = 1
+            nalpha_prime = 1
             return q_prime, p_prime, q_prime, p_prime, q_prime, n_prime, s_prime, alpha_prime, 1
 
         else:
@@ -183,14 +180,9 @@ class HMC:
             condition = U - 0.5 * onp.dot(p_0, p_0.T)
             u = condition - onp.random.exponential(1,size=1)
 
-            # #if resampling fails, reuse previous sample - theres probably something smarter to do here
-            # samples[m, :] = samples[m - 1, :]
-            # lnprob[m] = lnprob[m - 1]
-
             #initialise
             q_minus, q_plus = samples[m-1,:], samples[m-1,:]
             p_minus, p_plus = p_0, p_0
-            #grad_minus, grad_plus = gradU, gradU
             j, n, s = 0, 1, 1
 
             while s == 1:
@@ -221,11 +213,8 @@ class HMC:
                 epsilon = onp.exp(mu - onp.sqrt(m) / gamma * H_bar)
                 power = m ** -kappa
                 eps_bar = onp.exp(power * onp.log(epsilon) + (1-power) * onp.log(eps_bar))
-                # if m == M_adapt:
-                #     self.ncall_list.append(self.ncall)
             else:
                 epsilon = eps_bar
-                #self.ncall_list.append(self.ncall)
  
         #self.trace = samples[M_adapt:,:]
         #print(samples)
