@@ -53,7 +53,8 @@ class HMC:
     def get_u(self, q):
         """Compute the posterior and gradient from (and in) normalized coordinates"""
         # convert from normalized q coordinates to x
-        x = self.q2x(q)
+        #x = self.q2x(q)
+        x=q
         # Get the posterior and gradient
         logP, grad_logP = self.fun(x, *self.fun_args, **self.fun_kwargs)
         self.ncall += 1
@@ -97,7 +98,7 @@ class HMC:
 
         while alpha * condition > -alpha * onp.log(2.):
             #update epsilon
-            epsilon = epsilon * (1.5 ** alpha)
+            epsilon = epsilon * (2. ** alpha)
             print(epsilon)
             #simulate step
             _, p_prime, U_prime, _ = self.leapfrog(q,p_0,epsilon)
@@ -171,6 +172,9 @@ class HMC:
         samples = onp.empty((M+M_adapt,len(q_0)))
         lnprob = onp.empty((M+M_adapt,len(q_0)))
 
+        samples[0,:] = q_0
+        lnprob[0] = U
+
         for m in range(1, M + M_adapt):
             if m %((M+M_adapt)/50) == 0:
                 print(m)
@@ -178,6 +182,10 @@ class HMC:
             p_0 = onp.random.normal(0,1,len(q_0))
             condition = U - 0.5 * onp.dot(p_0, p_0.T)
             u = condition - onp.random.exponential(1,size=1)
+
+            # #if resampling fails, reuse previous sample - theres probably something smarter to do here
+            # samples[m, :] = samples[m - 1, :]
+            # lnprob[m] = lnprob[m - 1]
 
             #initialise
             q_minus, q_plus = samples[m-1,:], samples[m-1,:]
@@ -199,7 +207,8 @@ class HMC:
                     if onp.random.uniform() < min(1, float(n_prime) / float(n)):
                         samples[m, :] = q_prime
                         #print("Sample accepted j = " + str(j))
-                        self.paths.append(q_prime)
+                        self.trace.append(q_prime)
+                        self.ncall_list.append(self.ncall)
                         
 
                 n = n + n_prime
@@ -212,13 +221,11 @@ class HMC:
                 epsilon = onp.exp(mu - onp.sqrt(m) / gamma * H_bar)
                 power = m ** -kappa
                 eps_bar = onp.exp(power * onp.log(epsilon) + (1-power) * onp.log(eps_bar))
-                if m == M_adapt:
-                    self.ncall_list.append(self.ncall)
+                # if m == M_adapt:
+                #     self.ncall_list.append(self.ncall)
             else:
                 epsilon = eps_bar
-                self.ncall_list.append(self.ncall)
-
-            
-
-            
-        self.trace = samples[M_adapt:,:]
+                #self.ncall_list.append(self.ncall)
+ 
+        #self.trace = samples[M_adapt:,:]
+        #print(samples)
