@@ -180,8 +180,10 @@ class HMC:
         for m in range(1, M + M_adapt):
             if m %((M+M_adapt)/20) == 0:
                 print("Step %s of %s" %(m, M+M_adapt))
-            if m == M_adapt:
-                print("epsilon is " +str(epsilon))
+                #print("epsilon is " +str(epsilon))
+
+            if m == M_adapt+2:
+                print("final epsilon is " +str(epsilon))
             #resample - random kick?
             p_0 = onp.random.normal(0,1,len(q_0))
             condition = U - 0.5 * onp.dot(p_0, p_0.T)
