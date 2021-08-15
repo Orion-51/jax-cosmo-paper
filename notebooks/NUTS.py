@@ -44,6 +44,10 @@ class HMC:
         """Transform a vector in the space with diagonal mass to a parameter vector"""
         return self.L @ q + self.x0
 
+    def x2q(self, x):
+        """Transform a parameter vector to a vector in the space with diagonal mass"""
+        return self.Linv @ (x - self.x0)
+
     def stop_when(self, q_minus, q_plus, p_minus, p_plus):
         dq = q_plus - q_minus
         criterion_1 = onp.dot(dq,p_minus.T) >= 0
@@ -53,8 +57,8 @@ class HMC:
     def get_u(self, q):
         """Compute the posterior and gradient from (and in) normalized coordinates"""
         # convert from normalized q coordinates to x
-        #x = self.q2x(q)
-        x=q
+        x = self.q2x(q)
+        #x=q
         # Get the posterior and gradient
         logP, grad_logP = self.fun(x, *self.fun_args, **self.fun_kwargs)
         self.ncall += 1
@@ -62,8 +66,8 @@ class HMC:
         # we  don't have to convert logP because the coordinate transformation
         # is linear, so the change to P(x) is just a scaling, so the change to
         # logP is just a constant
-        #return -logP, -self.L.T @ grad_logPi
-        return logP, grad_logP
+        return logP, self.L.T @ grad_logP
+        #return logP, grad_logP
 
     def leapfrog(self, q, p, epsilon):
         #get gradient
@@ -156,6 +160,7 @@ class HMC:
 
     def NUTS(self, q_0, delta, M, M_adapt):
         #set some parameters
+        q_0 = self.x2q(q_0)
         epsilon = self.find_reasonable_epsilon(q_0)
         mu = onp.log(10*epsilon)
         eps_bar = 1
@@ -173,8 +178,10 @@ class HMC:
         lnprob[0] = U
 
         for m in range(1, M + M_adapt):
-            if m %((M+M_adapt)/50) == 0:
-                print(m)
+            if m %((M+M_adapt)/20) == 0:
+                print("Step %s of %s" %(m, M+M_adapt))
+            if m == M_adapt:
+                print("epsilon is " +str(epsilon))
             #resample - random kick?
             p_0 = onp.random.normal(0,1,len(q_0))
             condition = U - 0.5 * onp.dot(p_0, p_0.T)
@@ -199,7 +206,8 @@ class HMC:
                     if onp.random.uniform() < min(1, float(n_prime) / float(n)):
                         samples[m, :] = q_prime
                         #print("Sample accepted j = " + str(j))
-                        self.trace.append(q_prime)
+                        #HAVE TO CONVERT Q BACK TO X; DUH
+                        self.trace.append(self.q2x(q_prime))
                         self.ncall_list.append(self.ncall)
                         
 
@@ -215,6 +223,8 @@ class HMC:
                 eps_bar = onp.exp(power * onp.log(epsilon) + (1-power) * onp.log(eps_bar))
             else:
                 epsilon = eps_bar
+            
+
  
         #self.trace = samples[M_adapt:,:]
         #print(samples)

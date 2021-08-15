@@ -203,7 +203,7 @@ class HMC:
             if accept:
                 self.n_accept += 1
                 q = q_new
-                if j%(n/50)==0:
+                if j%(n/20)==0:
                     cat = 0
                     print(f"Accept {j} alpha={alpha:.2f}  p={p1:.2f}  ΔH={deltaH:.3f}")
             else:
