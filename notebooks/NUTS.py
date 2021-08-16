@@ -39,6 +39,11 @@ class HMC:
 
         self.ncall = 0
         self.ncall_list = []
+
+        self.accept = 0
+        self.acclist = []
+
+        self.ns = []
     
     def q2x(self, q):
         """Transform a vector in the space with diagonal mass to a parameter vector"""
@@ -50,9 +55,7 @@ class HMC:
 
     def stop_when(self, q_minus, q_plus, p_minus, p_plus):
         dq = q_plus - q_minus
-        criterion_1 = onp.dot(dq,p_minus.T) >= 0
-        criterion_2 = onp.dot(dq,p_plus.T) >= 0
-        return criterion_1 & criterion_2
+        return (onp.dot(dq, p_minus.T) >= 0) & (onp.dot(dq, p_plus.T) >= 0)
 
     def get_u(self, q):
         """Compute the posterior and gradient from (and in) normalized coordinates"""
@@ -115,7 +118,7 @@ class HMC:
 
 
     def build_tree(self,q,p,u,v,j,epsilon,q_0,p_0):
-        Delta_max = 1000
+        Delta_max = 1000.
         if j == 0:
             q_prime, p_prime, U_prime, gradU_prime = self.leapfrog(q,p,v*epsilon)
 
@@ -126,6 +129,7 @@ class HMC:
 
             #get nprime
             n_prime = int(u < condition)
+            #self.ns.append(n_prime)
             #get sprime
             s_prime = int(u < (Delta_max + condition))
 
@@ -146,15 +150,18 @@ class HMC:
                     _, _, q_plus, p_plus, q_2prime, n_2prime, s_2prime, alpha_2prime, nalpha_2prime = self.build_tree(q_plus,p_plus,u,v,j-1,epsilon,q_0,p_0)
 
                 #accept or reject new step
-                if onp.random.uniform() < max(float(int(n_prime) + int(n_2prime)), 1.):
+                #self.ns.append(float(n_2prime))
+                if onp.random.uniform() < (float(n_2prime) / max(float(int(n_prime) + int(n_2prime)), 1.)):
                     q_prime = q_2prime
+                    #self.accept +=1
 
                 #update acceptance criteria
-                alpha_prime = alpha_prime + alpha_2prime
-                nalpha_prime = nalpha_prime + nalpha_2prime
+                alpha_prime += alpha_2prime
+                nalpha_prime += nalpha_2prime
 
-                s_prime = int(s_2prime and self.stop_when(q_minus, q_plus, p_minus, p_plus))
-                n_prime = n_prime + n_2prime
+                #self.ns.append(n_2prime)
+                s_prime = int(s_prime and s_2prime and self.stop_when(q_minus, q_plus, p_minus, p_plus))
+                n_prime = int(n_prime) + int(n_2prime)
 
         return q_minus, p_minus, q_plus, p_plus, q_prime, n_prime, s_prime, alpha_prime, nalpha_prime
 
@@ -174,8 +181,10 @@ class HMC:
         samples = onp.empty((M+M_adapt,len(q_0)))
 
         samples[0,:] = q_0
+        self.ncall_list.append(self.ncall)
 
         for m in range(1, M + M_adapt):
+            #epsilon = 0.125
             if m %((M+M_adapt)/20) == 0:
                 print("Step %s of %s" %(m, M+M_adapt))
                 #print("epsilon is " +str(epsilon))
@@ -185,20 +194,21 @@ class HMC:
             #resample - random kick?
             p_0 = onp.random.normal(0,1,len(q_0))
             condition = U - 0.5 * onp.dot(p_0, p_0.T)
-            #u = condition - onp.random.exponential(1,size=1)
-            u = onp.log(onp.random.uniform(0,onp.exp(condition), size=1))
+            u = condition - onp.random.exponential(1,size=1)
+            #u = onp.log(onp.random.uniform(0,onp.exp(condition), size=1))
 
             #set m to m-1 step
             samples[m, :] = samples[m - 1, :]
 
             #initialise
             q_minus, q_plus = samples[m-1,:], samples[m-1,:]
-            p_minus, p_plus = p_0, p_0
+            p_minus, p_plus = p_0[:], p_0[:]
             j, n, s = 0, 1, 1
 
             while s == 1:
                 #choose direction
                 v = onp.random.choice([-1,1])
+                #print(v)
 
                 if v == -1:
                     q_minus, p_minus, _, _, q_prime, n_prime, s_prime, alpha, nalpha = self.build_tree(q_minus, p_minus, u, v, j, epsilon, samples[m-1,:], p_0)
@@ -206,17 +216,17 @@ class HMC:
                     _, _,q_plus, p_plus, q_prime, n_prime, s_prime, alpha, nalpha = self.build_tree(q_plus, p_plus, u, v, j, epsilon, samples[m-1,:], p_0)
 
                 #apply MH acceptance
-                if s_prime == 1:
-                    if onp.random.uniform() < min(1, float(n_prime) / float(n)):
-                        samples[m, :] = q_prime
-                        #print("Sample accepted j = " + str(j))
-                        #HAVE TO CONVERT Q BACK TO X; DUH
-                        self.paths.append(self.q2x(q_prime))
-                        
+                if s_prime == 1 and onp.random.uniform() < min(1, float(n_prime) / float(n)):
+                    samples[m, :] = q_prime
+                    #print("Sample accepted j = " + str(j))
+                    #HAVE TO CONVERT Q BACK TO X; DUH
+                    #self.paths.append(self.q2x(q_prime))
+                    #self.accept += 1
 
-                n = n + n_prime
+                n += n_prime
                 s = s_prime and self.stop_when(q_minus, q_plus, p_minus, p_plus)
                 j += 1
+                #self.ns.append(s)
 
             if m <= M_adapt:
                 fraction = 1/(m+t_0)
@@ -229,10 +239,25 @@ class HMC:
             else:
                 epsilon = eps_bar
 
-            self.trace.append(self.q2x(samples[m, :]))
+            #if m > M_adapt:
             self.ncall_list.append(self.ncall)
-            
 
+            #self.trace.append(self.q2x(samples[m, :]))
+            #self.ncall_list.append(self.ncall)
  
-        #self.trace = samples[M_adapt:,:]
+        self.trace = [self.q2x(i) for i in samples]#[M_adapt:,:]]
+        #self.trace = self.q2x(samples)
+        #ratio = self.accept/(M+M_adapt)
+        #print(self.accept)
+        #print("Acceptance fraction is " +str(ratio))
+        #print(onp.mean(self.ns))
+        #print(self.longest_seq(self.ns,True))
         #print(samples)
+
+    def longest_seq(self, A, target):
+        """ input list of elements, and target element, return longest sequence of target """
+        cnt, max_val = 0, 0 # running count, and max count
+        for e in A: 
+            cnt = cnt + 1 if e == target else 0  # add to or reset running count
+            max_val = max(cnt, max_val) # update max count
+        return max_val
