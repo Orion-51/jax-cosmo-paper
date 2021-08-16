@@ -172,10 +172,8 @@ class HMC:
 
         #make arrays to later hold stuff
         samples = onp.empty((M+M_adapt,len(q_0)))
-        lnprob = onp.empty((M+M_adapt,len(q_0)))
 
         samples[0,:] = q_0
-        lnprob[0] = U
 
         for m in range(1, M + M_adapt):
             if m %((M+M_adapt)/20) == 0:
@@ -188,7 +186,10 @@ class HMC:
             p_0 = onp.random.normal(0,1,len(q_0))
             condition = U - 0.5 * onp.dot(p_0, p_0.T)
             #u = condition - onp.random.exponential(1,size=1)
-            u = onp.random.uniform(0,onp.exp(condition), size=1)
+            u = onp.log(onp.random.uniform(0,onp.exp(condition), size=1))
+
+            #set m to m-1 step
+            samples[m, :] = samples[m - 1, :]
 
             #initialise
             q_minus, q_plus = samples[m-1,:], samples[m-1,:]
@@ -224,7 +225,7 @@ class HMC:
                 epsilon = onp.exp(mu - onp.sqrt(m) / gamma * H_bar)
                 power = m ** -kappa
                 eps_bar = onp.exp(power * onp.log(epsilon) + (1-power) * onp.log(eps_bar))
-                if m%5000 == 0:
+                if m%500000000 == 0:
                     print(epsilon)
             else:
                 epsilon = eps_bar
