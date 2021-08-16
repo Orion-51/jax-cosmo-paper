@@ -211,8 +211,7 @@ class HMC:
                         samples[m, :] = q_prime
                         #print("Sample accepted j = " + str(j))
                         #HAVE TO CONVERT Q BACK TO X; DUH
-                        self.trace.append(self.q2x(q_prime))
-                        self.ncall_list.append(self.ncall)
+                        self.paths.append(self.q2x(q_prime))
                         
 
                 n = n + n_prime
@@ -229,6 +228,9 @@ class HMC:
                     print(epsilon)
             else:
                 epsilon = eps_bar
+
+            self.trace.append(self.q2x(samples[m, :]))
+            self.ncall_list.append(self.ncall)
             
 
  
