@@ -187,7 +187,8 @@ class HMC:
             #resample - random kick?
             p_0 = onp.random.normal(0,1,len(q_0))
             condition = U - 0.5 * onp.dot(p_0, p_0.T)
-            u = condition - onp.random.exponential(1,size=1)
+            #u = condition - onp.random.exponential(1,size=1)
+            u = onp.random.uniform(0,onp.exp(condition), size=1)
 
             #initialise
             q_minus, q_plus = samples[m-1,:], samples[m-1,:]
@@ -223,6 +224,8 @@ class HMC:
                 epsilon = onp.exp(mu - onp.sqrt(m) / gamma * H_bar)
                 power = m ** -kappa
                 eps_bar = onp.exp(power * onp.log(epsilon) + (1-power) * onp.log(eps_bar))
+                if m%5000 == 0:
+                    print(epsilon)
             else:
                 epsilon = eps_bar
             
