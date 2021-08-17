@@ -115,7 +115,8 @@ class HMC:
             # print out energy levels
             T = 0.5 * (p @ p)
             H = T + U
-            dH = H - H0
+            #dH = H - H0
+            #print(dH)
             # print(f'U={U:.3f}   T={T:.3f}   H={H:.3f}   ΔH={dH:.3f}')
             # record a trace of the log_post, -U
             self.paths_logP.append(-U)
@@ -156,6 +157,7 @@ class HMC:
         mu = onp.zeros(self.ndim)
         I = onp.eye(self.ndim)
         p = onp.random.multivariate_normal(mu, I)
+        #print(p)
         return p
 
     

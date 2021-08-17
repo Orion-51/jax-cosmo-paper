@@ -57,6 +57,14 @@ class HMC:
         dq = q_plus - q_minus
         return (onp.dot(dq, p_minus.T) >= 0) & (onp.dot(dq, p_plus.T) >= 0)
 
+    def random_kick(self):
+        """Generate a random momentum vector"""
+        mu = onp.zeros(self.ndim)
+        I = onp.eye(self.ndim)
+        p = onp.random.multivariate_normal(mu, I)
+        #print(p)
+        return p
+
     def get_u(self, q):
         """Compute the posterior and gradient from (and in) normalized coordinates"""
         # convert from normalized q coordinates to x
@@ -84,12 +92,18 @@ class HMC:
         #second half-update
         p_prime = p_prime + 0.5*epsilon*gradU_new
 
+        H0 = 0.5 * (p @ p) - U
+        H = 0.5 * (p_prime @ p_prime) - U_new
+        delta_H = H - H0
+        #if onp.abs(delta_H) > 0.01:
+        #    print(delta_H)
+
         return q_prime, p_prime, U_new, gradU_new
 
     def find_reasonable_epsilon(self, q):
         #set epsilon and an initial random momentum
         epsilon = 1.
-        p_0 = onp.random.normal(0.,1.,len(q))
+        p_0 = self.random_kick()
         #get U
         U, gradU = self.get_u(q)
 
@@ -184,7 +198,7 @@ class HMC:
         self.ncall_list.append(self.ncall)
 
         for m in range(1, M + M_adapt):
-            #epsilon = 0.125
+            #epsilon = 0.0125
             if m %((M+M_adapt)/20) == 0:
                 print("Step %s of %s" %(m, M+M_adapt))
                 #print("epsilon is " +str(epsilon))
@@ -192,7 +206,8 @@ class HMC:
             if m == M_adapt+2:
                 print("final epsilon is " +str(epsilon))
             #resample - random kick?
-            p_0 = onp.random.normal(0,1,len(q_0))
+            p_0 = self.random_kick()
+            #print(p_0)
             condition = U - 0.5 * onp.dot(p_0, p_0.T)
             u = condition - onp.random.exponential(1,size=1)
             #u = onp.log(onp.random.uniform(0,onp.exp(condition), size=1))
@@ -229,13 +244,13 @@ class HMC:
                 #self.ns.append(s)
 
             if m <= M_adapt:
-                fraction = 1/(m+t_0)
+                fraction = 1./(m+t_0)
                 H_bar = (1. - fraction) * H_bar + fraction * (delta - alpha / float(nalpha))
                 epsilon = onp.exp(mu - onp.sqrt(m) / gamma * H_bar)
                 power = m ** -kappa
-                eps_bar = onp.exp(power * onp.log(epsilon) + (1-power) * onp.log(eps_bar))
-                if m%500000000 == 0:
-                    print(epsilon)
+                eps_bar = onp.exp(power * onp.log(epsilon) + (1.-power) * onp.log(eps_bar))
+                # if m%(M_adapt/20) == 0:
+                #     print(epsilon)
             else:
                 epsilon = eps_bar
 
